@@ -1,0 +1,282 @@
+// ============================================================
+// 「像素夜城」设计系统 —— 第二轮 UI 改造
+//
+// 设计来源:
+//   - bxx114514.cc   → Hero 背景图 + 固定装饰层的表现力
+//   - white233.top   → 首屏头像构图 + 技术极客气质
+//   - timpcfan.site  → 毛玻璃吸顶导航栏
+//   - mister-hope.com → 背景与内容面板分离、克制的卡片细节
+//
+// 图层结构(全站统一):
+//   body 基础底色(--site-bg-base,滚动无关)
+//   └─ .site-bg        固定背景层(clientAppEnhance 注入,不随滚动移动)
+//       ├─ .site-bg__image  像素城市壁纸
+//       └─ .site-bg__scrim  可读性遮罩(首页轻 / 内容页重)
+//   └─ .theme-container 内容层(z-index: 1,导航/正文/侧栏/页脚)
+//
+// 注意:theme-hope 并未提供 --bg-color 变量,以下所有色彩令牌
+// 均为本设计系统自定义,按 html[data-theme] 明暗模式分发。
+// ============================================================
+
+// ---------- 设计令牌 ----------
+// 主色取自壁纸霓虹招牌(青色),辅助色取自壁纸暖黄灯光
+:root {
+  --theme-color: #178f8b;
+  --site-accent: #178f8b;
+  --site-accent-strong: #0e716e;
+  --site-accent-soft: rgba(23, 143, 139, 0.12);
+  --site-amber: #b97a1e;
+  --site-panel-border: rgba(20, 18, 31, 0.12);
+  --site-font-mono: "JetBrains Mono", "Cascadia Code", Consolas, "Courier New",
+    monospace;
+
+  // 亮色模式分层底色
+  --site-bg-base: #ffffff;
+  --site-scrim-top: rgba(255, 255, 255, 0.88);
+  --site-scrim-mid: rgba(255, 255, 255, 0.94);
+  --site-hero-top: rgba(255, 255, 255, 0.78);
+  --site-hero-mid: rgba(255, 255, 255, 0.88);
+  --site-hero-m-top: rgba(255, 255, 255, 0.84);
+  --site-glass: rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme="dark"] {
+  --theme-color: #3ddad7;
+  --site-accent: #3ddad7;
+  --site-accent-strong: #6ff0ea;
+  --site-accent-soft: rgba(61, 218, 215, 0.13);
+  --site-amber: #f0b656;
+  --site-panel-border: rgba(255, 255, 255, 0.09);
+
+  // 暗色模式分层底色(与主题暗色底 #1d1d29 对齐)
+  --site-bg-base: #1d1d29;
+  --site-scrim-top: rgba(29, 29, 41, 0.84);
+  --site-scrim-mid: rgba(29, 29, 41, 0.92);
+  --site-hero-top: rgba(22, 20, 36, 0.28);
+  --site-hero-mid: rgba(22, 20, 36, 0.46);
+  --site-hero-m-top: rgba(22, 20, 36, 0.52);
+  --site-glass: rgba(29, 29, 41, 0.72);
+}
+
+// ---------- 全站固定背景层 ----------
+// 独立于内容滚动;fixed 定位保证滚轮、路由切换后位置稳定
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none; // 不拦截点击
+}
+
+.site-bg__image {
+  position: absolute;
+  inset: -2%; // 四周留出血,呼吸动画位移时不露边
+  // 壁纸地址由 client.ts 按 BASE_URL 注入,回退值适配本地开发
+  background-image: var(--site-bg-url, url("/hero-bg.png"));
+  background-position: center 68%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: pixel-bg-breathe 45s ease-in-out infinite alternate;
+}
+
+.site-bg__scrim {
+  position: absolute;
+  inset: 0;
+  // 内容页:遮罩较重,文字落在近实色底上,仅顶部隐约透出壁纸
+  background: linear-gradient(
+    180deg,
+    var(--site-scrim-top) 0%,
+    var(--site-scrim-mid) 38%,
+    var(--site-bg-base) 100%
+  );
+}
+
+.site-bg--home .site-bg__scrim {
+  // 首页:壁纸充分露出,底部渐入实底保证特性卡片可读
+  background: linear-gradient(
+    180deg,
+    var(--site-hero-top) 0%,
+    var(--site-hero-mid) 55%,
+    var(--site-bg-base) 100%
+  );
+}
+
+@keyframes pixel-bg-breathe {
+  from {
+    transform: scale(1) translateY(0);
+  }
+  to {
+    transform: scale(1.07) translateY(-1.2%);
+  }
+}
+
+// 移动端与低性能场景:关闭动画,内容页遮罩加重保证阅读;首页适度露出壁纸
+@media (max-width: 719px) {
+  .site-bg__image {
+    animation: none;
+  }
+
+  .site-bg__scrim {
+    background: linear-gradient(
+      180deg,
+      var(--site-scrim-mid) 0%,
+      var(--site-bg-base) 42%,
+      var(--site-bg-base) 100%
+    );
+  }
+
+  .site-bg--home .site-bg__scrim {
+    background: linear-gradient(
+      180deg,
+      var(--site-hero-m-top) 0%,
+      var(--site-hero-mid) 50%,
+      var(--site-bg-base) 100%
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-bg__image {
+    animation: none;
+  }
+}
+
+// body 底色对齐设计令牌(壁纸层之下,遮罩底部实色与其无缝衔接)
+body {
+  background: var(--site-bg-base);
+}
+
+// 内容层整体抬高至背景层之上(导航/正文/侧栏/页脚)
+.theme-container {
+  position: relative;
+  z-index: 1;
+}
+
+// ---------- 导航栏:毛玻璃吸顶(参考 timpcfan.site) ----------
+.vp-navbar {
+  background: var(--site-glass) !important;
+  -webkit-backdrop-filter: saturate(1.5) blur(14px);
+  backdrop-filter: saturate(1.5) blur(14px);
+  border-bottom: 1px solid var(--site-panel-border);
+  box-shadow: none;
+}
+
+// 导航栏链接(含 GitHub 入口)悬停反馈
+.vp-navbar a {
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+// ---------- 首页 ----------
+.vp-project-home {
+  // 背景已上移至全局固定层,首页自身保持透明
+  background: transparent;
+}
+
+// Hero 文字投影:暗色压壁纸,亮色提边缘
+html[data-theme="dark"] .vp-hero-title,
+html[data-theme="dark"] #main-description {
+  text-shadow: 0 2px 14px rgba(8, 6, 18, 0.65);
+}
+
+html[data-theme="light"] .vp-hero-title,
+html[data-theme="light"] #main-description {
+  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.55);
+}
+
+// tagline 前置等宽注释符,呼应「代码 · 像素」主题
+.vp-project-home #main-description::before {
+  content: "// ";
+  font-family: var(--site-font-mono);
+  font-weight: 600;
+  color: var(--site-accent);
+}
+
+// 特性卡片:半透明毛玻璃,悬停轻微上浮 + 霓虹描边
+.vp-feature-item {
+  background: var(--site-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--site-panel-border);
+  border-radius: 10px;
+  transition: transform 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.vp-feature-item:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--site-accent) 45%, transparent);
+  box-shadow: 0 10px 28px rgba(5, 8, 20, 0.35);
+}
+
+// ---------- 文章排版 ----------
+main.vp-page {
+  overflow-wrap: anywhere; // 长标题/长单词安全换行
+}
+
+// h2 左侧霓虹短竖条,建立清晰的标题层级
+main.vp-page h2 {
+  position: relative;
+  padding-left: 1.05rem;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.32em;
+    width: 4px;
+    height: 1.05em;
+    border-radius: 2px;
+    background: var(--site-accent);
+  }
+}
+
+// 正文链接:主题色下划线,悬停加深
+.vp-page-content a {
+  color: var(--site-accent);
+  text-decoration: none;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--site-accent) 35%, transparent);
+  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+
+  &:hover {
+    color: var(--site-accent-strong);
+    border-bottom-color: currentColor;
+  }
+}
+
+// 行内代码:终端感等宽字 + 霓虹软底
+.vp-page-content :not(pre) > code {
+  font-family: var(--site-font-mono);
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+// ---------- 细节 ----------
+::selection {
+  background: rgba(61, 218, 215, 0.32);
+}
+
+html[data-theme="light"] ::selection {
+  background: rgba(23, 143, 139, 0.25);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--site-accent) 28%, transparent);
+  border-radius: 5px;
+
+  &:hover {
+    background: color-mix(in srgb, var(--site-accent) 45%, transparent);
+  }
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

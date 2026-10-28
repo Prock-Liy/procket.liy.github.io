@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# VuePress build artifacts & caches
+blog/docs/.vuepress/.temp/
+blog/docs/.vuepress/.cache/
+blog/docs/.vuepress/dist/
+
+# misc
+*.log
+.DS_Store
+.screenshots/
+.idea/
